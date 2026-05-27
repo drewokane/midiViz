@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shader Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; }
+    </style>
+</head>
+<body>
+    <script>
+        const filterFragSrc = `
+precision highp float;
+
+uniform sampler2D tex0;
+uniform float u_time;
+uniform float u_noise_intensity;
+uniform float u_dither_intensity;
+
+varying vec2 vTexcoord;
+
+float rand(vec2 co) {
+    return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+void main() {
+    vec2 uv = vTexcoord;
+    vec4 color = texture2D(tex0, uv);
+
+    // Noise grain overlay
+    float noise = rand(uv * vec2(1920.0, 1080.0) + u_time * 100.0);
+    float grain = (noise - 0.5) * u_noise_intensity;
+    color.rgb += grain;
+
+    // Bayer dither overlay
+    float bayer[16];
+    bayer[0]  =  0.0; bayer[1]  = 8.0; bayer[2]  =  2.0; bayer[3]  = 10.0;
+    bayer[4]  = 12.0; bayer[5]  = 4.0; bayer[6]  = 14.0; bayer[7]  =  6.0;
+    bayer[8]  =  3.0; bayer[9]  = 11.0; bayer[10] =  1.0; bayer[11] =  9.0;
+    bayer[12] = 15.0; bayer[13] = 7.0; bayer[14] = 13.0; bayer[15] =  5.0;
+
+    ivec2 pos = ivec2(mod(gl_FragCoord.xy, 4.0));
+    int idx = pos.y * 4 + pos.x;
+    float t = bayer[idx] / 16.0;
+
+    color.rgb *= (1.0 - u_dither_intensity * t);
+
+    gl_FragColor = color;
+}
+`;
+
+        let filterShader;
+        let time = 0;
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            colorMode(HSB, 360, 100, 100);
+            
+            try {
+                filterShader = createFilterShader(filterFragSrc);
+                console.log('Shader created successfully');
+            } catch (e) {
+                console.error('Shader creation failed:', e);
+            }
+        }
+
+        function draw() {
+            background(0);
+            
+            // Draw some test content
+            noStroke();
+            for (let i = 0; i < 10; i++) {
+                fill((frameCount + i * 36) % 360, 80, 80);
+                circle(
+                    width/2 + cos(frameCount * 0.02 + i) * 200,
+                    height/2 + sin(frameCount * 0.02 + i) * 200,
+                    50
+                );
+            }
+            
+            // Apply shader
+            if (filterShader) {
+                try {
+                    filterShader.setUniform('u_time', time);
+                    filterShader.setUniform('u_noise_intensity', 0.08);
+                    filterShader.setUniform('u_dither_intensity', 0.15);
+                    filter(filterShader);
+                    
+                    time += 0.1;
+                } catch (e) {
+                    console.error('Shader apply failed:', e);
+                    filterShader = null;
+                }
+            }
+            
+            // Show FPS
+            fill(0, 0, 100);
+            noStroke();
+            text('FPS: ' + Math.round(frameRate()), 10, 20);
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+    </script>
+</body>
+</html>
