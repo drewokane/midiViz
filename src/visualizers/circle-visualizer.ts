@@ -1,6 +1,7 @@
 import p5 from 'p5';
 import { BaseVisualizer } from './base-visualizer';
 import { MidiEvent } from '../midi-events';
+import { getPaletteColor, mapCCToPaletteIndex } from '../color-palette';
 
 class Circle {
   x: number;
@@ -9,8 +10,6 @@ class Circle {
   maxLifetime: number = 100;
   lifetime: number = 100;
   hue: number = 200;
-  saturation: number = 100;
-  brightness: number = 100;
 
   constructor(x: number, y: number, size: number) {
     this.x = x;
@@ -23,11 +22,11 @@ class Circle {
     this.size = this.size;
   }
 
-  draw(p: p5, w: number, h: number): void {
+  draw(p: p5, w: number, h: number, sat: number, bright: number): void {
     p.noStroke();
     const lifeRatio = this.lifetime / this.maxLifetime;
     const alpha = Math.pow(lifeRatio, 2) * 80;
-    p.fill(this.hue, this.saturation, this.brightness, alpha);
+    p.fill(this.hue, sat, bright, alpha);
     p.ellipse(this.x, this.y, this.size, this.size);
   }
 
@@ -36,19 +35,13 @@ class Circle {
     this.size *= 0.95;
     return this.lifetime > 0;
   }
-
-  setVisualProperties(hue: number, saturation: number, brightness: number): void {
-    this.hue = hue;
-    this.saturation = saturation;
-    this.brightness = brightness;
-  }
 }
 
 export class CircleVisualizer extends BaseVisualizer {
   private circles: Circle[] = [];
-  private hue: number = 200;
-  private saturation: number = 100;
-  private brightness: number = 100;
+  private paletteIndex: number = 0;
+  private globalSaturation: number = 100;
+  private globalBrightness: number = 100;
 
   constructor() {
     super('Circle');
@@ -73,20 +66,20 @@ export class CircleVisualizer extends BaseVisualizer {
 
   private createCircle(x: number, y: number, size: number): void {
     const circle = new Circle(x, y, size);
-    circle.setVisualProperties(this.hue, this.saturation, this.brightness);
+    circle.hue = getPaletteColor(this.paletteIndex).hue;
     this.circles.push(circle);
   }
 
   private handleControlChange(controller: number, value: number): void {
     switch (controller) {
       case 1:
-        this.hue = (value / 127) * 360;
+        this.paletteIndex = mapCCToPaletteIndex(value);
         break;
       case 7:
-        this.brightness = (value / 127) * 100;
+        this.globalBrightness = (value / 127) * 100;
         break;
       case 10:
-        this.saturation = (value / 127) * 100;
+        this.globalSaturation = (value / 127) * 100;
         break;
     }
   }
@@ -95,8 +88,7 @@ export class CircleVisualizer extends BaseVisualizer {
     if (!this.sketch) return;
 
     this.circles.forEach(circle => {
-      circle.setVisualProperties(this.hue, this.saturation, this.brightness);
-      circle.draw(this.sketch!, this.width, this.height);
+      circle.draw(this.sketch!, this.width, this.height, this.globalSaturation, this.globalBrightness);
     });
   }
 

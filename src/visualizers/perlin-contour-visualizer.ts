@@ -1,6 +1,7 @@
 import p5 from 'p5';
 import { MidiEvent } from '../midi-events';
 import { BaseVisualizer } from "./base-visualizer";
+import { getPaletteColor, mapCCToPaletteIndex } from '../color-palette';
 
 export class PerlinContourVisualizer extends BaseVisualizer {
   private noiseScale: number = 0.01;
@@ -9,6 +10,7 @@ export class PerlinContourVisualizer extends BaseVisualizer {
   private noiseValues: number[][] = [];
   private time: number = 0;
   private jiggle: number = 0.05;
+  private paletteIndex: number = 0;
 
   constructor() {
     super('PerlinContour');
@@ -52,7 +54,8 @@ export class PerlinContourVisualizer extends BaseVisualizer {
   }
 
   draw(): void {
-    this.sketch.stroke(255);
+    const c = getPaletteColor(this.paletteIndex);
+    this.sketch.stroke(c.hue, c.sat, c.bright);
     this.sketch.strokeWeight(1);
 
     // Horizontal contour lines - check all rows including edges
@@ -94,6 +97,8 @@ export class PerlinContourVisualizer extends BaseVisualizer {
     if (event.type === 'noteOn') {
       // Map note velocity to threshold (0.1 to 0.9)
       this.threshold = Math.max(0.8 * Math.random() + 0.1, 0.5);
+    } else if (event.type === 'controlChange' && event.controller === 1) {
+      this.paletteIndex = mapCCToPaletteIndex(event.value);
     }
   }
 

@@ -2,6 +2,7 @@ import p5 from "p5";
 import { BaseVisualizer } from "./base-visualizer";
 import { MidiEvent } from "../midi-events";
 import { lerp } from "../utils/lerp";
+import { getRandomPaletteColor, mapCCToPaletteIndex } from "../color-palette";
 
 class Rectangle {
     // Rectangles in p5 are defined by upper left point,
@@ -97,6 +98,7 @@ class Rectangle {
 export class RectSlideVisualizer extends BaseVisualizer {
     private rectangles: Rectangle[] = [];
     private numRectangles: number = 5;
+    private paletteIndex: number = 0;
 
     constructor() {
         super('RectSlideVisualizer')
@@ -119,8 +121,9 @@ export class RectSlideVisualizer extends BaseVisualizer {
             // Create rectangle
             const rect = new Rectangle(randomX1, randomY1, randomX2, randomY2, randomWidth, randomHeight);
             
-            // Randomize hue (0-360)
-            rect.hue = Math.random() * 360;
+            // Randomize hue from palette
+            const palColor = getRandomPaletteColor();
+            rect.hue = palColor.hue;
             
             // Set transparency
             rect.alpha = 60;
@@ -146,8 +149,12 @@ export class RectSlideVisualizer extends BaseVisualizer {
     }
 
     private handleControlChange(controller: number, value: number): void {
+        // CC#1 (modulation) selects palette index for new elements
+        if (controller === 1) {
+            this.paletteIndex = mapCCToPaletteIndex(value);
+        }
         // CC#7 (volume) controls brightness for all rectangles
-        if (controller === 7) {
+        else if (controller === 7) {
             const brightness = (value / 127) * 100;
             this.rectangles.forEach(rect => {
                 rect.brightness = brightness;

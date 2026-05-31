@@ -5,6 +5,7 @@ import { RectBounceVisualizer } from './visualizers/rect-bounce-visualizer';
 import { PerlinContourVisualizer } from './visualizers/perlin-contour-visualizer';
 import { ArcRotateVisualizer } from './visualizers/arc-rotate-visualizer';
 import { RectSlideVisualizer } from './visualizers/rect-slide-visualizer';
+import { DataWaveVisualizer } from './visualizers/data-wave-visualizer';
 import { drawVisualEffects } from './visual-effects';
 import filterWorkingFragSrc from './shaders/filter-working.frag?raw';
 
@@ -126,6 +127,7 @@ export class Sketch {
     this.manager.addVisualizer(new RectBounceVisualizer());
     this.manager.addVisualizer(new PerlinContourVisualizer());
     this.manager.addVisualizer(new RectSlideVisualizer());
+    this.manager.addVisualizer(new DataWaveVisualizer());
   }
 
   public handleMidiMessage(message: Uint8Array): void {
